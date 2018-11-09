@@ -1,5 +1,4 @@
 defmodule ExIRC.Utils do
-
   ######################
   # IRC Message Parsing
   ######################
@@ -18,7 +17,11 @@ defmodule ExIRC.Utils do
 
   def parse(raw_data) do
     data = :string.substr(raw_data, 1, length(raw_data))
+
     case data do
+      [?@ |_] ->
+        [[?@ | tags]|[[?:|from]|rest]] = :string.tokens(data, ' ')
+        get_cmd(rest, parse_from(from, %ExIRC.Message{ctcp: false, tags: get_tags(tags)}))
       [?:|_] ->
           [[?:|from]|rest] = :string.tokens(data, ' ')
           get_cmd(rest, parse_from(from, %ExIRC.Message{ctcp: false}))
@@ -42,6 +45,21 @@ defmodule ExIRC.Utils do
         else
           %{msg | nick: nick}
         end
+    end
+  end
+
+  defp get_tags(raw) do
+    to_string(raw) |>
+    String.split(";") |>
+    Enum.map(fn x -> String.split(x, "=") end) |>
+    Enum.reduce(%{}, fn [x,y], acc -> Map.put(acc, x, tag_value(y)) end)
+  end
+
+  defp tag_value(value) do
+    case String.split(value, ",") do
+      [""] -> nil
+      [value] -> value
+      rest -> rest
     end
   end
 

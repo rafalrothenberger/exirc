@@ -30,7 +30,7 @@ defmodule ExIRC.Client do
               user_prefixes:    "",
               login_time:       "",
               channels:         [],
-              debug?:           false,
+              debug?:           true,
               retries:          0,
               inet:             :inet,
               owner:            nil,
@@ -416,7 +416,7 @@ defmodule ExIRC.Client do
     Transport.send(state, names!(channel))
     {:reply, :ok, state}
   end
-  
+
   def handle_call({:whois, user}, _from, state) do
     Transport.send(state, whois!(user))
     {:reply, :ok, state}
@@ -596,8 +596,8 @@ defmodule ExIRC.Client do
     {:noreply, new_state}
   end
   # Called when another user joins a channel the client is in
-  def handle_data(%ExIRC.Message{nick: user_nick, cmd: "JOIN", host: host, user: user} = msg, state) do
-    sender = %SenderInfo{nick: user_nick, host: host, user: user}
+  def handle_data(%ExIRC.Message{nick: user_nick, cmd: "JOIN", host: host, user: user, tags: tags} = msg, state) do
+    sender = %SenderInfo{nick: user_nick, host: host, user: user, tags: tags}
     channel = msg.args |> List.first |> String.trim
     if state.debug?, do: debug "ANOTHER USER JOINED A CHANNEL: #{channel} - #{user_nick}"
     channels  = Channels.user_join(state.channels, channel, user_nick)
@@ -773,7 +773,7 @@ defmodule ExIRC.Client do
     {:noreply, state}
   end
   # Called when we leave a channel
-  
+
   def handle_data(%ExIRC.Message{cmd: "PART", nick: nick} = msg, %ClientState{nick: nick} = state) do
 
     channel = msg.args |> List.first |> String.trim
@@ -784,8 +784,8 @@ defmodule ExIRC.Client do
     {:noreply, new_state}
   end
   # Called when someone else in our channel leaves
-  def handle_data(%ExIRC.Message{cmd: "PART", nick: from, host: host, user: user} = msg, state) do
-    sender = %SenderInfo{nick: from, host: host, user: user}
+  def handle_data(%ExIRC.Message{cmd: "PART", nick: from, host: host, user: user, tags: tags} = msg, state) do
+    sender = %SenderInfo{nick: from, host: host, user: user, tags: tags}
     channel = msg.args |> List.first |> String.trim
     if state.debug?, do: debug "#{from} LEFT A CHANNEL: #{channel}"
     channels  = Channels.user_part(state.channels, channel, from)
@@ -793,8 +793,8 @@ defmodule ExIRC.Client do
     send_event {:parted, channel, sender}, new_state
     {:noreply, new_state}
   end
-  def handle_data(%ExIRC.Message{cmd: "QUIT", nick: from, host: host, user: user} = msg, state) do
-    sender = %SenderInfo{nick: from, host: host, user: user}
+  def handle_data(%ExIRC.Message{cmd: "QUIT", nick: from, host: host, user: user, tags: tags} = msg, state) do
+    sender = %SenderInfo{nick: from, host: host, user: user, tags: tags}
     reason = msg.args |> List.first
     if state.debug?, do: debug "#{from} QUIT"
     channels = Channels.user_quit(state.channels, from)
@@ -824,32 +824,32 @@ defmodule ExIRC.Client do
   end
   # Called when we are kicked from a channel
 
-  def handle_data(%ExIRC.Message{cmd: "KICK", args: [channel, nick, reason], nick: by, host: host, user: user} = _msg, %ClientState{nick: nick} = state) do
+  def handle_data(%ExIRC.Message{cmd: "KICK", args: [channel, nick, reason], nick: by, host: host, user: user, tags: tags} = _msg, %ClientState{nick: nick} = state) do
 
-    sender = %SenderInfo{nick: by, host: host, user: user}
+    sender = %SenderInfo{nick: by, host: host, user: user, tags: tags}
     if state.debug?, do: debug "WE WERE KICKED FROM #{channel} BY #{by}"
     send_event {:kicked, sender, channel, reason}, state
     {:noreply, state}
   end
   # Called when someone else was kicked from a channel
 
-  def handle_data(%ExIRC.Message{cmd: "KICK", args: [channel, nick, reason], nick: by, host: host, user: user} = _msg, state) do
+  def handle_data(%ExIRC.Message{cmd: "KICK", args: [channel, nick, reason], nick: by, host: host, user: user, tags: tags} = _msg, state) do
 
-    sender = %SenderInfo{nick: by, host: host, user: user}
+    sender = %SenderInfo{nick: by, host: host, user: user, tags: tags}
     if state.debug?, do: debug "#{nick} WAS KICKED FROM #{channel} BY #{by}"
     send_event {:kicked, nick, sender, channel, reason}, state
     {:noreply, state}
   end
   # Called when someone sends us a message
-  def handle_data(%ExIRC.Message{nick: from, cmd: "PRIVMSG", args: [nick, message], host: host, user: user} = _msg, %ClientState{nick: nick} = state) do
-    sender = %SenderInfo{nick: from, host: host, user: user}
+  def handle_data(%ExIRC.Message{nick: from, cmd: "PRIVMSG", args: [nick, message], host: host, user: user, tags: tags} = _msg, %ClientState{nick: nick} = state) do
+    sender = %SenderInfo{nick: from, host: host, user: user, tags: tags}
     if state.debug?, do: debug "#{from} SENT US #{message}"
     send_event {:received, message, sender}, state
     {:noreply, state}
   end
   # Called when someone sends a message to a channel we're in, or a list of users
-  def handle_data(%ExIRC.Message{nick: from, cmd: "PRIVMSG", args: [to, message], host: host, user: user} = _msg, %ClientState{nick: nick} = state) do
-    sender = %SenderInfo{nick: from, host: host, user: user}
+  def handle_data(%ExIRC.Message{nick: from, cmd: "PRIVMSG", args: [to, message], host: host, user: user, tags: tags} = _msg, %ClientState{nick: nick} = state) do
+    sender = %SenderInfo{nick: from, host: host, user: user, tags: tags}
     if state.debug?, do: debug "#{from} SENT #{message} TO #{to}"
     send_event {:received, message, sender, to}, state
     # If we were mentioned, fire that event as well
@@ -857,19 +857,20 @@ defmodule ExIRC.Client do
     {:noreply, state}
   end
   # Called when someone uses ACTION, i.e. `/me dies`
-  def handle_data(%ExIRC.Message{nick: from, cmd: "ACTION", args: [channel, message], host: host, user: user} = _msg, state) do
-    sender = %SenderInfo{nick: from, host: host, user: user}
+  def handle_data(%ExIRC.Message{nick: from, cmd: "ACTION", args: [channel, message], host: host, user: user, tags: tags} = _msg, state) do
+    sender = %SenderInfo{nick: from, host: host, user: user, tags: tags}
     if state.debug?, do: debug "* #{from} #{message} in #{channel}"
     send_event {:me, message, sender, channel}, state
     {:noreply, state}
   end
-  
+
   # Called when a NOTICE is received by the client.
-  def handle_data(%ExIRC.Message{nick: from, cmd: "NOTICE", args: [_target, message], host: host, user: user} = _msg, state) do
+  def handle_data(%ExIRC.Message{nick: from, cmd: "NOTICE", args: [_target, message], host: host, user: user, tags: tags} = _msg, state) do
 
     sender = %SenderInfo{nick: from,
                          host: host,
-                         user: user}
+                         user: user,
+                         tags: tags}
 
     if String.contains?(message, "identify") do
         if state.debug?, do: debug("* Told to identify by #{from}: #{message}")
@@ -882,9 +883,46 @@ defmodule ExIRC.Client do
     {:noreply, state}
   end
 
+  # Called when a CLEARCHAT is received by the client.
+  def handle_data(%ExIRC.Message{cmd: "CLEARCHAT", args: [channel, target]} = _msg, state) do
+    send_event({:clearchat, channel, target}, state)
+    {:noreply, state}
+  end
+
+  # Called when a CLEARMSG is received by the client.
+  def handle_data(%ExIRC.Message{cmd: "CLEARMSG", args: [channel, target]} = _msg, state) do
+    send_event({:clearmsg, channel, target}, state)
+    {:noreply, state}
+  end
+
+  # Called when a ROOMSTATE is received by the client.
+  def handle_data(%ExIRC.Message{cmd: "ROOMSTATE", args: [channel], tags: tags} = _msg, state) do
+    send_event({:roomstate, channel, tags}, state)
+    {:noreply, state}
+  end
+
+  # Called when a USERSTATE is received by the client.
+  def handle_data(%ExIRC.Message{cmd: "USERSTATE", args: [channel], tags: tags} = _msg, state) do
+    send_event({:userstate, channel, tags}, state)
+    {:noreply, state}
+  end
+
+  # Called when a USERSTATE is received by the client.
+  def handle_data(%ExIRC.Message{cmd: "USERNOTICE", args: [channel, msg], tags: tags} = _msg, state) do
+    send_event({:usernotice, channel, tags, msg}, state)
+    {:noreply, state}
+  end
+
+  # Called when a CLEARCHAT is received by the client.
+  # def handle_data(%ExIRC.Message{cmd: "USERSTATE", args: [channel], tags: tags} = _msg, state) do
+  #   send_event({:userstate, channel, tags}, state)
+  #   {:noreply, state}
+  # end
+
+
   # Called any time we receive an unrecognized message
   def handle_data(msg, state) do
-    if state.debug? do debug "UNRECOGNIZED MSG: #{msg.cmd}"; IO.inspect(msg) end
+    # if state.debug? do debug "UNRECOGNIZED MSG: #{msg.cmd}"; IO.inspect(msg) end
     send_event {:unrecognized, msg.cmd, msg}, state
     {:noreply, state}
   end

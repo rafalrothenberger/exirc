@@ -5,5 +5,6 @@ defmodule ExIRC.Message do
             host:    '',
             ctcp:    nil,
             cmd:     '',
-            args:    []
+            args:    [],
+            tags:    %{}
 end

@@ -54,8 +54,9 @@ defmodule ExampleHandler do
     debug "Joined #{channel}"
     {:noreply, nil}
   end
-  def handle_info({:joined, channel, user}, _state) do
-    debug "#{user} joined #{channel}"
+  def handle_info({:joined, channel, sender}, _state) do
+    nick = sender.nick
+    debug "#{nick} joined #{channel}"
     {:noreply, nil}
   end
   def handle_info({:topic_changed, channel, topic}, _state) do

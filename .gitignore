@@ -3,6 +3,7 @@ doc
 deps/
 ebin/
 _build/
+.elixir_ls/
 .exenv-version
 erl_crash.dump
 bench/snapshots

@@ -4,5 +4,6 @@ defmodule ExIRC.SenderInfo do
   """
   defstruct nick: nil,
             host: nil,
-            user: nil
+            user: nil,
+            tags: %{}
 end
