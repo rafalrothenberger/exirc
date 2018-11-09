@@ -126,7 +126,7 @@ defmodule ExampleHandler do
     {:noreply, nil}
   end
   # Catch-all for messages you don't care about
-  def handle_info({_client, msg}, _state) do
+  def handle_info(msg, _state) do
     Logger.debug "Received ExIRC.Message:"
     IO.inspect msg
     {:noreply, nil}
