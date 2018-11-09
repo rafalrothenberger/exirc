@@ -854,24 +854,28 @@ defmodule ExIRC.Client do
 
   # Called when cap req was acknowledged
   def handle_data(%ExIRC.Message{cmd: "CAP", args: ["*", "ACK", caps]} = _msg, state) do
+    if state.debug?, do: debug "ACKNOWLEDGED CAPS: #{caps}"
     send_event {:cap_ack, caps}, state
     {:noreply, state}
   end
 
   # Called when cap req was rejected
   def handle_data(%ExIRC.Message{cmd: "CAP", args: ["*", "NAK", caps]} = _msg, state) do
+    if state.debug?, do: debug "REJECTED CAPS: #{caps}"
     send_event {:cap_nak, caps}, state
     {:noreply, state}
   end
 
   # Called when server sends list of available capabilities
   def handle_data(%ExIRC.Message{cmd: "CAP", args: ["*", "LS", caps]} = _msg, state) do
+    if state.debug?, do: debug "AVAILABLE CAPS: #{caps}"
     send_event {:cap_ls, caps}, state
     {:noreply, state}
   end
 
   # Called when server sends list of active capabilities
   def handle_data(%ExIRC.Message{cmd: "CAP", args: ["*", "LIST", caps]} = _msg, state) do
+    if state.debug?, do: debug "ACTIVE CAPS: #{caps}"
     send_event {:cap_list, caps}, state
     {:noreply, state}
   end
@@ -995,12 +999,6 @@ defmodule ExIRC.Client do
     send_event({:usernotice, channel, tags, msg}, state)
     {:noreply, state}
   end
-
-  # Called when a CLEARCHAT is received by the client.
-  # def handle_data(%ExIRC.Message{cmd: "USERSTATE", args: [channel], tags: tags} = _msg, state) do
-  #   send_event({:userstate, channel, tags}, state)
-  #   {:noreply, state}
-  # end
 
 
   # Called any time we receive an unrecognized message
