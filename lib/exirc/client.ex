@@ -1008,7 +1008,7 @@ defmodule ExIRC.Client do
   # Internal API
   ###############
   defp send_event(msg, %ClientState{event_handlers: handlers}) when is_list(handlers) do
-    Enum.each(handlers, fn({pid, _}) -> Kernel.send(pid, msg) end)
+    Enum.each(handlers, fn({pid, _}) -> Kernel.send(pid, {self(), msg}) end)
   end
 
   defp do_add_handler(pid, handlers) do
