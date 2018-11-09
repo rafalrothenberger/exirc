@@ -1014,6 +1014,7 @@ defmodule ExIRC.Client do
   defp do_add_handler(pid, handlers) do
     case Enum.member?(handlers, pid) do
       false ->
+        Kernel.send(pid, {:handshake, self()})
         ref = Process.monitor(pid)
         [{pid, ref} | handlers]
       true ->
