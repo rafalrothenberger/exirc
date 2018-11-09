@@ -1,4 +1,5 @@
 defmodule ExIRC.App do
+  alias ExIRC.Client
   @moduledoc """
   Entry point for the ExIRC application.
   """

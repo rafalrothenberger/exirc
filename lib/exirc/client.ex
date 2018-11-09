@@ -159,6 +159,41 @@ defmodule ExIRC.Client do
     GenServer.call(client, {:part, channel}, :infinity)
   end
   @doc """
+  Request capability
+  """
+  @spec cap_req(client :: pid, cap :: binary) :: :ok | {:error, atom}
+  def cap_req(client, cap) do
+    GenServer.call(client, {:cap_req, cap}, :infinity)
+  end
+  @doc """
+  Acknowledge capability
+  """
+  @spec cap_ack(client :: pid, cap :: binary) :: :ok | {:error, atom}
+  def cap_ack(client, cap) do
+    GenServer.call(client, {:cap_ack, cap}, :infinity)
+  end
+  @doc """
+  List available capabilities
+  """
+  @spec cap_ls(client :: pid) :: :ok | {:error, atom}
+  def cap_ls(client) do
+    GenServer.call(client, :cap_ls, :infinity)
+  end
+  @doc """
+  List active capabilities
+  """
+  @spec cap_list(client :: pid) :: :ok | {:error, atom}
+  def cap_list(client) do
+    GenServer.call(client, :cap_list, :infinity)
+  end
+  @doc """
+  End capability negotation
+  """
+  @spec cap_end(client :: pid) :: :ok | {:error, atom}
+  def cap_end(client) do
+    GenServer.call(client, :cap_end, :infinity)
+  end
+  @doc """
   Kick a user from a channel
   """
   @spec kick(client :: pid, channel :: binary, nick :: binary, message :: binary | nil) :: :ok | {:error, atom}
@@ -406,6 +441,31 @@ defmodule ExIRC.Client do
     Transport.send(state, part!(channel))
     {:reply, :ok, state}
   end
+  # Handles a call to request capability
+  def handle_call({:cap_req, cap}, _from, state) do
+    Transport.send(state, cap_req!(cap))
+    {:reply, :ok, state}
+  end
+  # Handles a call to acknowledge capability
+  def handle_call({:cap_ack, cap}, _from, state) do
+    Transport.send(state, cap_ack!(cap))
+    {:reply, :ok, state}
+  end
+  # Handles a call to list available capabilities
+  def handle_call(:cap_ls, _from, state) do
+    Transport.send(state, cap_ls!())
+    {:reply, :ok, state}
+  end
+  # Handles a call to list avtive capabilities
+  def handle_call(:cap_list, _from, state) do
+    Transport.send(state, cap_list!())
+    {:reply, :ok, state}
+  end
+  # Handles a call to end negotation of capabilities
+  def handle_call(:cap_end, _from, state) do
+    Transport.send(state, cap_end!())
+    {:reply, :ok, state}
+  end
   # Handles a call to kick a client
   def handle_call({:kick, channel, nick, message}, _from, state) do
     Transport.send(state, kick!(channel, nick, message))
@@ -490,9 +550,6 @@ defmodule ExIRC.Client do
     }
     {:noreply, new_state}
   end
-  @doc """
-  Handle messages from the SSL socket connection.
-  """
   # Handles the client's socket connection 'closed' event
   def handle_info({:ssl_closed, socket}, state) do
     handle_info({:tcp_closed, socket}, state)
@@ -772,8 +829,8 @@ defmodule ExIRC.Client do
     send_event {:mode, [channel, op, user]}, state
     {:noreply, state}
   end
-  # Called when we leave a channel
 
+  # Called when we leave a channel
   def handle_data(%ExIRC.Message{cmd: "PART", nick: nick} = msg, %ClientState{nick: nick} = state) do
 
     channel = msg.args |> List.first |> String.trim
@@ -783,6 +840,7 @@ defmodule ExIRC.Client do
     send_event {:parted, channel}, new_state
     {:noreply, new_state}
   end
+
   # Called when someone else in our channel leaves
   def handle_data(%ExIRC.Message{cmd: "PART", nick: from, host: host, user: user, tags: tags} = msg, state) do
     sender = %SenderInfo{nick: from, host: host, user: user, tags: tags}
@@ -793,6 +851,31 @@ defmodule ExIRC.Client do
     send_event {:parted, channel, sender}, new_state
     {:noreply, new_state}
   end
+
+  # Called when cap req was acknowledged
+  def handle_data(%ExIRC.Message{cmd: "CAP", args: ["*", "ACK", caps]} = _msg, state) do
+    send_event {:cap_ack, caps}, state
+    {:noreply, state}
+  end
+
+  # Called when cap req was rejected
+  def handle_data(%ExIRC.Message{cmd: "CAP", args: ["*", "NAK", caps]} = _msg, state) do
+    send_event {:cap_nak, caps}, state
+    {:noreply, state}
+  end
+
+  # Called when server sends list of available capabilities
+  def handle_data(%ExIRC.Message{cmd: "CAP", args: ["*", "LS", caps]} = _msg, state) do
+    send_event {:cap_ls, caps}, state
+    {:noreply, state}
+  end
+
+  # Called when server sends list of active capabilities
+  def handle_data(%ExIRC.Message{cmd: "CAP", args: ["*", "LIST", caps]} = _msg, state) do
+    send_event {:cap_list, caps}, state
+    {:noreply, state}
+  end
+
   def handle_data(%ExIRC.Message{cmd: "QUIT", nick: from, host: host, user: user, tags: tags} = msg, state) do
     sender = %SenderInfo{nick: from, host: host, user: user, tags: tags}
     reason = msg.args |> List.first

@@ -45,7 +45,7 @@ defmodule ExIRC.Commands do
       @rpl_localusers "265"
       @rpl_globalusers "266"
       #@doc """
-      #When sending a TOPIC message to determine the channel topic, 
+      #When sending a TOPIC message to determine the channel topic,
       #one of two replies is sent. If the topic is set, RPL_TOPIC is sent back else
       #RPL_NOTOPIC.
       #"""
@@ -108,12 +108,12 @@ defmodule ExIRC.Commands do
       @err_no_such_channel "403"
       #@doc """
       #Sent to a user who is either (a) not on a channel which is mode +n or (b),
-      #not a chanop (or mode +v) on a channel which has mode +m set, and is trying 
+      #not a chanop (or mode +v) on a channel which has mode +m set, and is trying
       #to send a PRIVMSG message to that channel.
       #"""
       @err_cannot_send_to_chan "404"
       #@doc """
-      #Sent to a user when they have joined the maximum number of allowed channels 
+      #Sent to a user when they have joined the maximum number of allowed channels
       #and they try to join another channel.
       #"""
       @err_too_many_channels "405"
@@ -130,7 +130,7 @@ defmodule ExIRC.Commands do
       #"""
       @err_erroneus_nick "432"
       #@doc """
-      #Returned when a NICK message is processed that results in an attempt to 
+      #Returned when a NICK message is processed that results in an attempt to
       #change to a currently existing nick.
       #"""
       @err_nick_in_use "433"
@@ -143,17 +143,17 @@ defmodule ExIRC.Commands do
       #"""
       @err_unavail_resource "437"
       #@doc """
-      #Returned by the server to indicate that the client must be registered before 
+      #Returned by the server to indicate that the client must be registered before
       #the server will allow it to be parsed in detail.
       #"""
       @err_not_registered "451"
       #"""
-      # Returned by the server by numerous commands to indicate to the client that 
+      # Returned by the server by numerous commands to indicate to the client that
       # it didn"t supply enough parameters.
       #"""
       @err_need_more_params "461"
       #@doc """
-      #Returned by the server to any link which tries to change part of the registered 
+      #Returned by the server to any link which tries to change part of the registered
       #details (such as password or user details from second USER message).
       #"""
       @err_already_registered "462"
@@ -259,6 +259,26 @@ defmodule ExIRC.Commands do
   Send part command to server (leave a channel)
   """
   def part!(channel), do: command! ['PART ', channel]
+  @doc """
+  Send cap req command to server (request capability)
+  """
+  def cap_req!(cap), do: command! ['CAP REQ ', cap]
+  @doc """
+  Send cap ack command to server (acknowledge capability)
+  """
+  def cap_ack!(cap), do: command! ['CAP ACK ', cap]
+  @doc """
+  Send cap ls command to server (list available capabilities)
+  """
+  def cap_ls!, do: command! ['CAP LS']
+  @doc """
+  Send cap list command to server (list active capabilities)
+  """
+  def cap_list!, do: command! ['CAP LIST']
+  @doc """
+  Send cap end command to server (end negotation of capabilities)
+  """
+  def cap_end!, do: command! ['CAP END']
   @doc """
   Send quit command to server (disconnect from server)
   """
